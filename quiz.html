@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Loading…</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="noise"></div>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">
+      <a href="index.html" style="text-decoration:none;display:flex;align-items:center;gap:.5rem;">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">QuizPortal</span>
+      </a>
+    </div>
+    <div id="timerBox" class="timer-box" style="display:none">
+      <span class="timer-label">TIME</span>
+      <span id="timerDisplay" class="timer-display">--:--</span>
+    </div>
+  </div>
+</header>
+
+<main class="main-content">
+
+  <!-- LOADING STATE -->
+  <div id="stateLoading" class="state-screen">
+    <div class="spinner"></div>
+    <p>Loading quiz…</p>
+  </div>
+
+  <!-- ERROR STATE -->
+  <div id="stateError" class="state-screen" style="display:none">
+    <div class="error-icon">✕</div>
+    <h2>Something went wrong</h2>
+    <p id="errorMsg">Could not load the quiz.</p>
+    <a href="index.html" class="btn-primary">← Back to Quizzes</a>
+  </div>
+
+  <!-- STUDENT INFO FORM -->
+  <div id="stateInfo" class="state-screen" style="display:none">
+    <section class="info-card">
+      <div class="info-header">
+        <div class="info-subject" id="infoSubject">Quiz</div>
+        <h1 class="info-title" id="infoTitle">Loading…</h1>
+        <p class="info-desc" id="infoDesc"></p>
+      </div>
+      <div class="info-meta" id="infoMeta"></div>
+      <div class="info-form">
+        <h3>Enter Your Details</h3>
+        <div class="form-group">
+          <label for="studentName">Full Name</label>
+          <input type="text" id="studentName" placeholder="e.g. Rahul Sharma" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="studentId">Roll Number / Student ID</label>
+          <input type="text" id="studentId" placeholder="e.g. 2024CS001" autocomplete="off">
+        </div>
+        <div class="info-notice">
+          <strong>Note:</strong> You will receive a <em>Submission ID</em> after submitting. Save it to check your results later.
+        </div>
+        <button class="btn-primary btn-full" id="btnStartQuiz">Start Quiz →</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- QUIZ QUESTIONS -->
+  <div id="stateQuiz" style="display:none">
+    <div class="quiz-progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="quiz-layout">
+      <aside class="question-nav" id="questionNav"></aside>
+      <div class="questions-panel">
+        <form id="quizForm">
+          <div id="questionsContainer"></div>
+        </form>
+        <div class="submit-zone">
+          <div class="submit-info">
+            <span id="answeredCount">0</span> of <span id="totalCount">0</span> questions answered
+          </div>
+          <button class="btn-primary" id="btnSubmit">Submit Quiz ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMISSION SUCCESS -->
+  <div id="stateSuccess" class="state-screen" style="display:none">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+      <h2>Quiz Submitted!</h2>
+      <p>Your answers have been recorded.</p>
+      <div class="submission-id-box">
+        <div class="sid-label">YOUR SUBMISSION ID</div>
+        <div class="sid-value" id="submissionIdDisplay">—</div>
+        <button class="btn-copy" id="btnCopy" onclick="copyId()">Copy ID</button>
+      </div>
+      <div id="autoScoreBox" class="auto-score-box" style="display:none">
+        <span id="autoScoreText"></span>
+      </div>
+      <p class="success-note" id="pendingNote" style="display:none">
+        Some answers require manual grading. Results will be released by your teacher.
+      </p>
+      <div class="success-actions">
+        <a href="result.html" class="btn-secondary">Check Results</a>
+        <a href="index.html" class="btn-primary">Back to Quizzes</a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="config.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+const params  = new URLSearchParams(location.search);
+const sheetId = params.get('sheetId');
+let questions = [];
+let timerInterval = null;
+let timeLeft = 0;
+let answers = {};
+
+// ── Init ───────────────────────────────────────────────────────────────
+if (!sheetId) showError("No sheet ID provided. <a href='index.html'>Go back</a>");
+else loadQuiz();
+
+async function api(action, extra = {}) {
+  const qs = new URLSearchParams({ action, sheetId, ...extra });
+  const res = await fetch(`${SCRIPT_URL}?${qs}`);
+  return res.json();
+}
+
+async function loadQuiz() {
+  try {
+    const [cfg, qData] = await Promise.all([
+      api('getConfig'),
+      api('getQuestions')
+    ]);
+    if (!cfg.ok)  throw new Error(cfg.error);
+    if (!qData.ok) throw new Error(qData.error);
+
+    questions = qData.questions;
+    document.title = cfg.title + ' — QuizPortal';
+
+    document.getElementById('infoSubject').textContent = 'QUIZ';
+    document.getElementById('infoTitle').textContent   = cfg.title;
+    document.getElementById('infoDesc').textContent    = cfg.description;
+
+    const meta = [];
+    if (cfg.duration) meta.push(`⏱ ${cfg.duration} minutes`);
+    if (cfg.passMark) meta.push(`✓ Pass mark: ${cfg.passMark}`);
+    meta.push(`❓ ${questions.length} questions`);
+    document.getElementById('infoMeta').innerHTML =
+      meta.map(m => `<span class="meta-chip">${m}</span>`).join('');
+
+    // Store duration for timer
+    if (cfg.duration) timeLeft = cfg.duration * 60;
+
+    show('stateInfo');
+    document.getElementById('btnStartQuiz').onclick = () => {
+      const name = document.getElementById('studentName').value.trim();
+      const sid  = document.getElementById('studentId').value.trim();
+      if (!name) { alert('Please enter your name.'); return; }
+      if (!sid)  { alert('Please enter your student ID / roll number.'); return; }
+      renderQuiz(name, sid);
+    };
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderQuiz(name, sid) {
+  window._studentName = name;
+  window._studentId   = sid;
+
+  const container = document.getElementById('questionsContainer');
+  container.innerHTML = '';
+  const nav = document.getElementById('questionNav');
+  nav.innerHTML = '<div class="nav-label">Questions</div>';
+
+  questions.forEach((q, idx) => {
+    // Nav button
+    const nb = document.createElement('button');
+    nb.className = 'nav-dot';
+    nb.textContent = idx + 1;
+    nb.type = 'button';
+    nb.id = `nav_${idx}`;
+    nb.onclick = () => document.getElementById(`q_${idx}`).scrollIntoView({ behavior:'smooth', block:'center' });
+    nav.appendChild(nb);
+
+    // Question card
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `q_${idx}`;
+    card.setAttribute('data-qid', q.id);
+
+    const typeLabel = { mcq:'Multiple Choice', 'one-word':'One Word', 'one_word':'One Word', 'short-answer':'Short Answer', short_answer:'Short Answer', essay:'Essay', long:'Long Answer' }[q.type?.toLowerCase()] || q.type;
+
+    card.innerHTML = `
+      <div class="q-header">
+        <span class="q-num">Q${idx+1}</span>
+        <span class="q-type">${typeLabel}</span>
+        <span class="q-marks">${q.marks || 1} mark${(q.marks||1)>1?'s':''}</span>
+      </div>
+      <div class="q-text">${q.question_text || q['question text'] || ''}</div>
+      <div class="q-answer" id="ans_${idx}"></div>
+    `;
+    container.appendChild(card);
+
+    // Answer input
+    const ansDiv = document.getElementById(`ans_${idx}`);
+    const t = (q.type || '').toLowerCase();
+
+    if (t === 'mcq') {
+      (q.options || []).forEach((opt, oi) => {
+        const label = document.createElement('label');
+        label.className = 'option-label';
+        label.innerHTML = `<input type="radio" name="q_${q.id}" value="${esc(opt)}"><span>${opt}</span>`;
+        label.querySelector('input').addEventListener('change', () => recordAnswer(q.id, opt, idx));
+        ansDiv.appendChild(label);
+      });
+    } else if (t === 'one-word' || t === 'one_word') {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'answer-input';
+      inp.placeholder = 'Type your one-word answer…';
+      inp.addEventListener('input', () => recordAnswer(q.id, inp.value, idx));
+      ansDiv.appendChild(inp);
+    } else if (t === 'short-answer' || t === 'short_answer') {
+      const ta = document.createElement('textarea');
+      ta.className = 'answer-textarea short';
+      ta.placeholder = 'Write your short answer here… (2–5 sentences)';
+      ta.rows = 4;
+      ta.addEventListener('input', () => recordAnswer(q.id, ta.value, idx));
+      ansDiv.appendChild(ta);
+    } else {
+      // essay / long
+      const ta = document.createElement('textarea');
+      ta.className = 'answer-textarea long';
+      ta.placeholder = 'Write your detailed answer here…';
+      ta.rows = 8;
+      ta.addEventListener('input', () => recordAnswer(q.id, ta.value, idx));
+      ansDiv.appendChild(ta);
+    }
+  });
+
+  document.getElementById('totalCount').textContent = questions.length;
+
+  // Timer
+  if (timeLeft > 0) {
+    const tb = document.getElementById('timerBox');
+    tb.style.display = 'flex';
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 0) { clearInterval(timerInterval); autoSubmit(); }
+      if (timeLeft === 300) document.getElementById('timerBox').classList.add('timer-warning');
+    }, 1000);
+  }
+
+  show('stateQuiz');
+  document.getElementById('btnSubmit').onclick = handleSubmit;
+}
+
+function recordAnswer(qId, val, idx) {
+  answers[qId] = val;
+  document.getElementById(`nav_${idx}`)?.classList.add('answered');
+  updateAnsweredCount();
+  updateProgress();
+}
+
+function updateAnsweredCount() {
+  document.getElementById('answeredCount').textContent = Object.keys(answers).length;
+}
+
+function updateProgress() {
+  const pct = (Object.keys(answers).length / questions.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+  const s = (timeLeft % 60).toString().padStart(2,'0');
+  document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+}
+
+function autoSubmit() {
+  alert('Time is up! Your quiz will be submitted now.');
+  handleSubmit();
+}
+
+async function handleSubmit() {
+  const unanswered = questions.length - Object.keys(answers).length;
+  if (unanswered > 0) {
+    if (!confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) return;
+  }
+  clearInterval(timerInterval);
+  document.getElementById('btnSubmit').disabled = true;
+  document.getElementById('btnSubmit').textContent = 'Submitting…';
+
+  try {
+    const payload = {
+      studentName: window._studentName,
+      studentId:   window._studentId,
+      answers
+    };
+    const res = await api('submitQuiz', { payload: JSON.stringify(payload) });
+    if (!res.ok) throw new Error(res.error);
+
+    document.getElementById('submissionIdDisplay').textContent = res.submissionId;
+
+    if (res.autoScore !== undefined) {
+      document.getElementById('autoScoreBox').style.display = 'block';
+      document.getElementById('autoScoreText').innerHTML =
+        `Auto-graded score: <strong>${res.autoScore} / ${res.totalMarks}</strong>`;
+    }
+    if (res.needsManual) {
+      document.getElementById('pendingNote').style.display = 'block';
+    }
+
+    show('stateSuccess');
+  } catch(e) {
+    alert('Submission failed: ' + e.message);
+    document.getElementById('btnSubmit').disabled = false;
+    document.getElementById('btnSubmit').textContent = 'Submit Quiz ✓';
+  }
+}
+
+function copyId() {
+  const id = document.getElementById('submissionIdDisplay').textContent;
+  navigator.clipboard.writeText(id).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy ID', 2000);
+  });
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────
+function show(id) {
+  ['stateLoading','stateError','stateInfo','stateQuiz','stateSuccess'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? '' : 'none';
+  });
+}
+function showError(msg) {
+  document.getElementById('errorMsg').innerHTML = msg;
+  show('stateError');
+}
+function esc(s) {
+  return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+</script>
+</body>
+</html>

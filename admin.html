@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — QuizPortal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-body">
+
+<div class="noise"></div>
+
+<header class="site-header admin-header">
+  <div class="header-inner">
+    <div class="logo">
+      <a href="index.html" style="text-decoration:none;display:flex;align-items:center;gap:.5rem;">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">QuizPortal</span>
+      </a>
+      <span class="admin-badge">ADMIN</span>
+    </div>
+    <div id="adminInfo" style="display:none" class="admin-session-info">
+      <span id="adminSheetLabel" class="admin-sheet-label"></span>
+      <button class="btn-ghost btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="main-content">
+
+  <!-- LOGIN SCREEN -->
+  <div id="stateLogin">
+    <section class="hero">
+      <div class="hero-tag">ADMIN</div>
+      <h1 class="hero-title">Dashboard<br><em>Login</em></h1>
+      <p class="hero-sub">Enter the Quiz Sheet ID and admin password to access the dashboard.</p>
+    </section>
+
+    <div class="lookup-card">
+      <div class="form-group">
+        <label for="adminSheetId">Quiz Sheet ID</label>
+        <input type="text" id="adminSheetId" placeholder="Google Sheet ID">
+      </div>
+      <div class="form-group">
+        <label for="adminPass">Admin Password</label>
+        <input type="password" id="adminPass" placeholder="Password set in Config tab">
+      </div>
+      <button class="btn-primary btn-full" id="btnLogin">Login →</button>
+      <div id="loginError" class="error-msg" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="stateLoading" class="state-screen" style="display:none">
+    <div class="spinner"></div>
+    <p id="loadingMsg">Loading submissions…</p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="stateDashboard" style="display:none">
+
+    <div class="dash-header">
+      <div>
+        <div class="dash-tag">SUBMISSIONS</div>
+        <h2 class="dash-title" id="dashTitle">Quiz Dashboard</h2>
+      </div>
+      <div class="dash-actions">
+        <button class="btn-accent" id="btnReleaseAll" onclick="releaseAll()">🚀 Release All Results</button>
+        <button class="btn-secondary" onclick="refreshSubmissions()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all" onclick="filterSubs('all',this)">All</button>
+      <button class="filter-tab" data-filter="pending" onclick="filterSubs('pending',this)">⚠ Needs Grading</button>
+      <button class="filter-tab" data-filter="graded" onclick="filterSubs('graded',this)">✓ Graded</button>
+      <button class="filter-tab" data-filter="hidden" onclick="filterSubs('hidden',this)">🔒 Hidden</button>
+      <button class="filter-tab" data-filter="released" onclick="filterSubs('released',this)">✓ Released</button>
+    </div>
+
+    <!-- Submissions Table -->
+    <div id="submissionsContainer"></div>
+
+  </div>
+
+</main>
+
+<!-- GRADING MODAL -->
+<div id="gradingModal" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="modalTitle">Grade Submission</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-student-info" id="modalStudentInfo"></div>
+      <div id="modalAnswers"></div>
+      <div class="modal-footer-actions">
+        <div class="modal-total">
+          Calculated Total: <strong id="modalCalcTotal">—</strong> / <span id="modalMaxMarks">—</span>
+        </div>
+        <button class="btn-primary" id="btnSaveGrades">Save Grades ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let sessionSheetId = '';
+let sessionPass    = '';
+let allSubmissions = [];
+let currentFilter  = 'all';
+
+// ── Login ──────────────────────────────────────────────────────────────
+document.getElementById('btnLogin').onclick = async () => {
+  const sheetId = document.getElementById('adminSheetId').value.trim();
+  const pass    = document.getElementById('adminPass').value.trim();
+  const errEl   = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  if (!sheetId || !pass) { errEl.textContent='Fill in all fields'; errEl.style.display='block'; return; }
+
+  show('stateLoading');
+  const res = await api('adminLogin', { password: pass }, sheetId);
+  if (!res.ok) { show('stateLogin'); errEl.textContent = res.error || 'Login failed'; errEl.style.display='block'; return; }
+
+  sessionSheetId = sheetId;
+  sessionPass    = pass;
+
+  document.getElementById('adminInfo').style.display = 'flex';
+  document.getElementById('adminSheetLabel').textContent = 'Sheet: …' + sheetId.slice(-8);
+
+  loadSubmissions();
+};
+
+document.getElementById('adminPass').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btnLogin').click(); });
+
+// ── Data ───────────────────────────────────────────────────────────────
+async function api(action, extra = {}, sid = sessionSheetId) {
+  const qs = new URLSearchParams({ action, sheetId: sid, password: sessionPass, ...extra });
+  const r = await fetch(`${SCRIPT_URL}?${qs}`);
+  return r.json();
+}
+
+async function loadSubmissions() {
+  show('stateLoading');
+  document.getElementById('loadingMsg').textContent = 'Loading submissions…';
+  const data = await api('getSubmissions');
+  if (!data.ok) { alert('Error: ' + data.error); show('stateLogin'); return; }
+
+  allSubmissions = data.submissions || [];
+  renderDashboard();
+  show('stateDashboard');
+}
+
+function refreshSubmissions() { loadSubmissions(); }
+
+function renderDashboard() {
+  // Stats
+  const total    = allSubmissions.length;
+  const pending  = allSubmissions.filter(s=>s.gradingStatus==='pending').length;
+  const released = allSubmissions.filter(s=>s.visibility==='released').length;
+  const avgScore = total > 0
+    ? (allSubmissions.reduce((sum,s)=> sum + (parseFloat(s.manualScore || s.autoScore) || 0), 0) / total).toFixed(1)
+    : '—';
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total Submissions</div></div>
+    <div class="stat-card stat-warn"><div class="stat-val">${pending}</div><div class="stat-label">Needs Grading</div></div>
+    <div class="stat-card stat-ok"><div class="stat-val">${released}</div><div class="stat-label">Results Released</div></div>
+    <div class="stat-card"><div class="stat-val">${avgScore}</div><div class="stat-label">Avg Score</div></div>
+  `;
+
+  renderSubmissions(currentFilter);
+}
+
+function filterSubs(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSubmissions(filter);
+}
+
+function renderSubmissions(filter) {
+  let subs = allSubmissions;
+  if (filter === 'pending')  subs = subs.filter(s=>s.gradingStatus==='pending');
+  if (filter === 'graded')   subs = subs.filter(s=>s.gradingStatus==='graded');
+  if (filter === 'hidden')   subs = subs.filter(s=>s.visibility==='hidden');
+  if (filter === 'released') subs = subs.filter(s=>s.visibility==='released');
+
+  const container = document.getElementById('submissionsContainer');
+
+  if (subs.length === 0) {
+    container.innerHTML = '<div class="empty-state">No submissions in this category.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  subs.forEach(sub => {
+    const finalScore = sub.manualScore !== '' && sub.manualScore !== undefined
+      ? sub.manualScore : sub.autoScore;
+    const needsGrading = sub.gradingStatus === 'pending';
+    const isReleased   = sub.visibility === 'released';
+
+    const card = document.createElement('div');
+    card.className = 'sub-card' + (needsGrading ? ' sub-pending' : '');
+    card.innerHTML = `
+      <div class="sub-card-header">
+        <div class="sub-id-name">
+          <code class="sub-id">${sub.submissionId}</code>
+          <span class="sub-name">${sub.studentName}</span>
+          <span class="sub-roll">(${sub.studentId})</span>
+        </div>
+        <div class="sub-badges">
+          ${needsGrading ? '<span class="badge badge-warn">⚠ Needs Grading</span>' : '<span class="badge badge-ok">✓ Graded</span>'}
+          ${isReleased   ? '<span class="badge badge-released">Released</span>' : '<span class="badge badge-hidden">Hidden</span>'}
+        </div>
+      </div>
+      <div class="sub-card-meta">
+        <span>📅 ${new Date(sub.submittedAt).toLocaleString('en-IN')}</span>
+        <span>Score: <strong>${finalScore !== '' ? finalScore : '—'} / ${sub.totalMarks}</strong></span>
+      </div>
+      <div class="sub-card-actions">
+        <button class="btn-secondary btn-sm" onclick="openGrading('${sub.submissionId}')">
+          ${needsGrading ? '✏ Grade' : '✏ Edit Grades'}
+        </button>
+        ${!isReleased
+          ? `<button class="btn-accent btn-sm" onclick="releaseOne('${sub.submissionId}', this)">🚀 Release Result</button>`
+          : `<span class="released-text">✓ Released</span>`
+        }
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ── Grading Modal ──────────────────────────────────────────────────────
+let currentSubId = '';
+
+function openGrading(submissionId) {
+  const sub = allSubmissions.find(s => s.submissionId === submissionId);
+  if (!sub) return;
+  currentSubId = submissionId;
+
+  document.getElementById('modalTitle').textContent = `Grade: ${sub.studentName}`;
+  document.getElementById('modalStudentInfo').innerHTML = `
+    <span><strong>${sub.studentName}</strong></span>
+    <span>ID: ${sub.studentId}</span>
+    <span>Submission: <code>${sub.submissionId}</code></span>
+    <span>Submitted: ${new Date(sub.submittedAt).toLocaleString('en-IN')}</span>
+  `;
+
+  const answersEl = document.getElementById('modalAnswers');
+  answersEl.innerHTML = '';
+  let totalMax = 0;
+
+  sub.answers.forEach((a, idx) => {
+    totalMax += parseFloat(a.marks) || 0;
+    const needsManual = a.type !== 'mcq' && a.type !== 'one-word' && a.type !== 'one_word';
+    const currentScore = a.manualScore !== null && a.manualScore !== undefined ? a.manualScore : a.autoScore;
+
+    const block = document.createElement('div');
+    block.className = 'grade-block' + (needsManual ? ' grade-manual' : '');
+    block.innerHTML = `
+      <div class="grade-q-header">
+        <span class="q-num">Q${idx+1}</span>
+        <span class="q-type">${a.type}</span>
+        <span class="q-marks">${a.marks} mark${a.marks>1?'s':''}</span>
+        ${!needsManual ? `<span class="badge badge-auto">Auto-graded: ${a.autoScore}/${a.marks}</span>` : ''}
+      </div>
+      <div class="grade-q-text">${a.questionText}</div>
+      <div class="grade-student-ans">
+        <div class="bc-label">Student's Answer:</div>
+        <div class="grade-answer-text">${a.given || '<em class="no-answer">No answer given</em>'}</div>
+      </div>
+      ${a.correct ? `<div class="grade-correct"><span class="bc-label">Correct Answer:</span> ${a.correct}</div>` : ''}
+      ${needsManual ? `
+        <div class="grade-input-row">
+          <label>Score (out of ${a.marks}):</label>
+          <input type="number" class="grade-score-input" data-qid="${a.qId}" data-max="${a.marks}"
+                 min="0" max="${a.marks}" step="0.5"
+                 value="${currentScore !== null && currentScore !== undefined ? currentScore : ''}"
+                 placeholder="0"
+                 oninput="updateCalcTotal()">
+        </div>` : ''}
+    `;
+    answersEl.appendChild(block);
+  });
+
+  document.getElementById('modalMaxMarks').textContent = totalMax;
+  updateCalcTotal();
+  document.getElementById('gradingModal').style.display = 'flex';
+
+  document.getElementById('btnSaveGrades').onclick = saveGrades;
+}
+
+function updateCalcTotal() {
+  const sub = allSubmissions.find(s => s.submissionId === currentSubId);
+  if (!sub) return;
+  let total = 0;
+  const inputs = document.querySelectorAll('.grade-score-input');
+  const inputMap = {};
+  inputs.forEach(inp => { inputMap[inp.dataset.qid] = parseFloat(inp.value) || 0; });
+
+  sub.answers.forEach(a => {
+    const needsManual = a.type !== 'mcq' && a.type !== 'one-word' && a.type !== 'one_word';
+    if (needsManual) {
+      total += inputMap[a.qId] || 0;
+    } else {
+      total += parseFloat(a.autoScore) || 0;
+    }
+  });
+  document.getElementById('modalCalcTotal').textContent = total.toFixed(1);
+}
+
+async function saveGrades() {
+  const grades = {};
+  document.querySelectorAll('.grade-score-input').forEach(inp => {
+    grades[inp.dataset.qid] = parseFloat(inp.value) || 0;
+  });
+
+  document.getElementById('btnSaveGrades').textContent = 'Saving…';
+  document.getElementById('btnSaveGrades').disabled = true;
+
+  const res = await api('saveGrades', { payload: JSON.stringify({ submissionId: currentSubId, grades }) });
+
+  if (res.ok) {
+    // Update local state
+    const sub = allSubmissions.find(s => s.submissionId === currentSubId);
+    if (sub) {
+      sub.manualScore   = res.newTotal;
+      sub.gradingStatus = 'graded';
+      Object.keys(grades).forEach(qId => {
+        const a = sub.answers.find(a => a.qId == qId);
+        if (a) { a.manualScore = grades[qId]; a.status = 'graded'; }
+      });
+    }
+    closeModal();
+    renderDashboard();
+  } else {
+    alert('Error saving grades: ' + res.error);
+  }
+
+  document.getElementById('btnSaveGrades').textContent = 'Save Grades ✓';
+  document.getElementById('btnSaveGrades').disabled = false;
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('gradingModal')) return;
+  document.getElementById('gradingModal').style.display = 'none';
+}
+
+// ── Release ────────────────────────────────────────────────────────────
+async function releaseOne(submissionId, btn) {
+  if (!confirm(`Release results for this submission?`)) return;
+  btn.textContent = 'Releasing…';
+  btn.disabled = true;
+  const res = await api('releaseResults', { submissionId });
+  if (res.ok) {
+    const sub = allSubmissions.find(s => s.submissionId === submissionId);
+    if (sub) sub.visibility = 'released';
+    renderDashboard();
+  } else {
+    alert('Error: ' + res.error);
+    btn.disabled = false;
+    btn.textContent = '🚀 Release';
+  }
+}
+
+async function releaseAll() {
+  const pending = allSubmissions.filter(s => s.visibility !== 'released').length;
+  if (!confirm(`Release results for ALL ${pending} unreleased submissions?`)) return;
+  const btn = document.getElementById('btnReleaseAll');
+  btn.textContent = 'Releasing…'; btn.disabled = true;
+  const res = await api('releaseResults', { submissionId: 'ALL' });
+  if (res.ok) {
+    allSubmissions.forEach(s => s.visibility = 'released');
+    renderDashboard();
+  } else {
+    alert('Error: ' + res.error);
+  }
+  btn.textContent = '🚀 Release All Results'; btn.disabled = false;
+}
+
+function logout() {
+  sessionSheetId = '';
+  sessionPass    = '';
+  allSubmissions = [];
+  document.getElementById('adminInfo').style.display = 'none';
+  document.getElementById('adminPass').value = '';
+  show('stateLogin');
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────
+function show(id) {
+  ['stateLogin','stateLoading','stateDashboard'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

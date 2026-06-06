@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Portal — Coaching Centre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="noise"></div>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">QuizPortal</span>
+    </div>
+    <nav class="header-nav">
+      <a href="index.html" class="nav-link active">Quizzes</a>
+      <a href="result.html" class="nav-link">My Results</a>
+      <a href="admin.html" class="nav-link nav-admin">Admin ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main class="main-content">
+  <section class="hero">
+    <div class="hero-tag">COACHING CENTRE</div>
+    <h1 class="hero-title">Take Your<br><em>Quiz</em> Today</h1>
+    <p class="hero-sub">Select a quiz below to begin. Keep your Submission ID safe — you'll need it to check results.</p>
+  </section>
+
+  <section class="quiz-list-section">
+    <div class="section-header">
+      <h2 class="section-title">Available Quizzes</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <!-- =====================================================
+         ADD YOUR QUIZZES HERE
+         Copy a .quiz-card block and fill in:
+           data-sheet-id  = your Google Sheet ID
+           data-title     = Quiz name
+           data-subject   = Subject label
+           data-date      = Date string
+           data-questions = Number of questions
+           data-duration  = Duration in minutes
+         ===================================================== -->
+
+    <div class="quiz-grid" id="quizGrid">
+
+      <!-- EXAMPLE CARD 1 — replace with your real sheet IDs -->
+      <article class="quiz-card" data-sheet-id="YOUR_SHEET_ID_HERE">
+        <div class="card-subject">Mathematics</div>
+        <h3 class="card-title">Chapter 5: Quadratic Equations</h3>
+        <div class="card-meta">
+          <span class="meta-item">📅 15 Jun 2025</span>
+          <span class="meta-item">❓ 20 Questions</span>
+          <span class="meta-item">⏱ 30 min</span>
+        </div>
+        <div class="card-footer">
+          <span class="card-badge badge-open">Open</span>
+          <button class="btn-take" onclick="startQuiz(this)">Take Quiz →</button>
+        </div>
+      </article>
+
+      <!-- EXAMPLE CARD 2 -->
+      <article class="quiz-card" data-sheet-id="YOUR_SECOND_SHEET_ID_HERE">
+        <div class="card-subject">Science</div>
+        <h3 class="card-title">Unit Test: Laws of Motion</h3>
+        <div class="card-meta">
+          <span class="meta-item">📅 18 Jun 2025</span>
+          <span class="meta-item">❓ 25 Questions</span>
+          <span class="meta-item">⏱ 45 min</span>
+        </div>
+        <div class="card-footer">
+          <span class="card-badge badge-open">Open</span>
+          <button class="btn-take" onclick="startQuiz(this)">Take Quiz →</button>
+        </div>
+      </article>
+
+    </div>
+    <!-- END QUIZ GRID -->
+
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>Powered by Google Sheets + GitHub Pages &mdash; 100% Free</p>
+</footer>
+
+<script>
+function startQuiz(btn) {
+  const card = btn.closest('.quiz-card');
+  const sheetId = card.dataset.sheetId;
+  if (!sheetId || sheetId.startsWith('YOUR_')) {
+    alert('Please update the sheet ID in index.html for this quiz card.');
+    return;
+  }
+  window.location.href = `quiz.html?sheetId=${sheetId}`;
+}
+</script>
+</body>
+</html>
