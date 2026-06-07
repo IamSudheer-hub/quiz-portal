@@ -122,15 +122,26 @@ let currentFilter  = 'all';
 let _selectedQuizName = '';
 
 // ── Populate quiz dropdown from config.js ──────────────────────────────
-(function populateDropdown() {
+function populateDropdown() {
   const sel = document.getElementById('adminQuizSelect');
-  (window.QUIZ_LIST || []).forEach(q => {
+  if (!sel) return;
+  while (sel.options.length > 1) sel.remove(1);
+  const list = window.QUIZ_LIST || [];
+  if (list.length === 0) {
+    const opt = document.createElement('option');
+    opt.disabled = true;
+    opt.textContent = '⚠ No quizzes found — update config.js';
+    sel.appendChild(opt);
+    return;
+  }
+  list.forEach(q => {
     const opt = document.createElement('option');
     opt.value = q.sheetId;
     opt.textContent = q.name;
     sel.appendChild(opt);
   });
-})();
+}
+populateDropdown();
 
 // ── Login ──────────────────────────────────────────────────────────────
 document.getElementById('btnLogin').onclick = async () => {
