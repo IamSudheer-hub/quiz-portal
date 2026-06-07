@@ -19,21 +19,21 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHwJGIF-WRdsyUM4jUY
 const QUIZ_LIST = [
   {
     name:      "Chapter 5: Quadratic Equations",
-    sheetId:   "YOUR_SHEET_ID_1",
+    sheetId:   "1eLUb0pJsxCskCCo0T9Qb9iUf3W6nNU559I4bNTqaypw",
     subject:   "Mathematics",
     date:      "15 Jun 2025",
     questions: 20,
     duration:  30,
     open:      true
   },
-  {
-    name:      "Unit Test: Laws of Motion",
-    sheetId:   "YOUR_SHEET_ID_2",
-    subject:   "Science",
-    date:      "18 Jun 2025",
-    questions: 25,
-    duration:  45,
-    open:      true
-  },
+  //{
+    //name:      "Unit Test: Laws of Motion",
+    //sheetId:   "YOUR_SHEET_ID_2",
+    //subject:   "Science",
+    //date:      "18 Jun 2025",
+    //questions: 25,
+    //duration:  45,
+    //open:      true
+  //},
   // Add more quizzes by copying the block above ↑
 ];
