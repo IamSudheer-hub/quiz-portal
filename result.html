@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -35,18 +37,21 @@
     <section class="hero">
       <div class="hero-tag">RESULTS</div>
       <h1 class="hero-title">Check Your<br><em>Score</em></h1>
-      <p class="hero-sub">Enter your Submission ID and the quiz Sheet ID to see your results.</p>
+      <p class="hero-sub">Select your quiz and enter your Submission ID to view results.</p>
     </section>
 
     <div class="lookup-card">
       <div class="form-group">
-        <label for="lookupSheetId">Quiz Sheet ID</label>
-        <input type="text" id="lookupSheetId" placeholder="Google Sheet ID from your teacher">
-        <small>Your teacher should share this with the quiz instructions.</small>
+        <label for="lookupQuizSelect">Select Quiz</label>
+        <select id="lookupQuizSelect" class="form-select">
+          <option value="">— Choose a quiz —</option>
+        </select>
       </div>
       <div class="form-group">
         <label for="lookupSubId">Submission ID</label>
-        <input type="text" id="lookupSubId" placeholder="e.g. QZABC123XY" autocomplete="off" style="font-family:'IBM Plex Mono',monospace;letter-spacing:.05em">
+        <input type="text" id="lookupSubId" placeholder="e.g. QZABC123XY" autocomplete="off"
+               style="font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase">
+        <small>You received this after submitting your quiz.</small>
       </div>
       <button class="btn-primary btn-full" id="btnLookup">Check Results →</button>
       <div id="lookupError" class="error-msg" style="display:none"></div>
@@ -72,62 +77,90 @@
     <div class="result-header">
       <button class="btn-ghost" onclick="resetLookup()">← Back</button>
       <h2 class="result-title">Your Results</h2>
+      <button class="btn-pdf" id="btnDownloadPDF" onclick="downloadPDF()">
+        ⬇ Download PDF
+      </button>
     </div>
 
-    <!-- Score Card -->
-    <div class="score-card" id="scoreCard">
-      <div class="score-ring-wrap">
-        <svg class="score-ring" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border)" stroke-width="8"/>
-          <circle cx="60" cy="60" r="54" fill="none" stroke="var(--accent)" stroke-width="8"
-                  stroke-dasharray="339.29" stroke-dashoffset="339.29"
-                  stroke-linecap="round" id="scoreRingFill"
-                  transform="rotate(-90 60 60)"/>
-        </svg>
-        <div class="score-ring-text">
-          <div class="score-big" id="scoreBig">—</div>
-          <div class="score-total" id="scoreTotal">/ —</div>
-        </div>
-      </div>
-      <div class="score-meta">
-        <div class="score-meta-row"><span>Student</span><strong id="resStudentName">—</strong></div>
-        <div class="score-meta-row"><span>Student ID</span><strong id="resStudentId">—</strong></div>
-        <div class="score-meta-row"><span>Submitted</span><strong id="resSubmittedAt">—</strong></div>
-        <div class="score-meta-row"><span>Submission ID</span><strong id="resSubId" style="font-family:'IBM Plex Mono',monospace;font-size:.85em">—</strong></div>
-        <div id="passFailRow" class="score-meta-row" style="display:none">
-          <span>Status</span><strong id="passFailBadge"></strong>
-        </div>
-      </div>
-    </div>
+    <!-- Printable result area -->
+    <div id="resultPrintArea">
 
-    <!-- Answer Breakdown -->
-    <div class="breakdown-section">
-      <h3 class="breakdown-title">Answer Breakdown</h3>
-      <div id="answersBreakdown"></div>
-    </div>
+      <!-- Score Card -->
+      <div class="score-card" id="scoreCard">
+        <div class="score-ring-wrap">
+          <svg class="score-ring" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--accent)" stroke-width="8"
+                    stroke-dasharray="339.29" stroke-dashoffset="339.29"
+                    stroke-linecap="round" id="scoreRingFill"
+                    transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="score-ring-text">
+            <div class="score-big" id="scoreBig">—</div>
+            <div class="score-total" id="scoreTotal">/ —</div>
+          </div>
+        </div>
+        <div class="score-meta">
+          <div class="score-meta-row"><span>Quiz</span><strong id="resQuizName">—</strong></div>
+          <div class="score-meta-row"><span>Student</span><strong id="resStudentName">—</strong></div>
+          <div class="score-meta-row"><span>Student ID</span><strong id="resStudentId">—</strong></div>
+          <div class="score-meta-row"><span>Submitted</span><strong id="resSubmittedAt">—</strong></div>
+          <div class="score-meta-row"><span>Submission ID</span>
+            <strong id="resSubId" style="font-family:'IBM Plex Mono',monospace;font-size:.85em">—</strong>
+          </div>
+          <div id="passFailRow" class="score-meta-row" style="display:none">
+            <span>Status</span><strong id="passFailBadge"></strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Answer Breakdown -->
+      <div class="breakdown-section">
+        <h3 class="breakdown-title">Answer Breakdown</h3>
+        <div id="answersBreakdown"></div>
+      </div>
+
+    </div><!-- end #resultPrintArea -->
   </div>
 
 </main>
 
 <script src="config.js"></script>
 <script>
+// ── Populate quiz dropdown from QUIZ_LIST ──────────────────
+const sel = document.getElementById('lookupQuizSelect');
+(QUIZ_LIST || []).forEach(q => {
+  const opt = document.createElement('option');
+  opt.value = q.sheetId;
+  opt.textContent = q.name;
+  sel.appendChild(opt);
+});
+
+// ── Wire up lookup ─────────────────────────────────────────
 document.getElementById('btnLookup').onclick = lookupResult;
-document.getElementById('lookupSubId').addEventListener('keydown', e => { if(e.key==='Enter') lookupResult(); });
+document.getElementById('lookupSubId').addEventListener('keydown', e => {
+  if (e.key === 'Enter') lookupResult();
+});
+
+// Store result data for PDF
+let _resultData = null;
+let _quizName   = '';
 
 async function lookupResult() {
-  const sheetId = document.getElementById('lookupSheetId').value.trim();
+  const sheetId = document.getElementById('lookupQuizSelect').value;
   const subId   = document.getElementById('lookupSubId').value.trim().toUpperCase();
   const errEl   = document.getElementById('lookupError');
   errEl.style.display = 'none';
 
-  if (!sheetId) { showErr('Please enter the Quiz Sheet ID.'); return; }
+  if (!sheetId) { showErr('Please select a quiz from the dropdown.'); return; }
   if (!subId)   { showErr('Please enter your Submission ID.'); return; }
 
-  show('stateLoading');
+  _quizName = document.getElementById('lookupQuizSelect').selectedOptions[0]?.text || '';
 
+  show('stateLoading');
   try {
-    const qs = new URLSearchParams({ action:'getResult', sheetId, submissionId: subId });
-    const data = await fetch(`${SCRIPT_URL}?${qs}`).then(r=>r.json());
+    const qs = new URLSearchParams({ action: 'getResult', sheetId, submissionId: subId });
+    const data = await fetch(`${SCRIPT_URL}?${qs}`).then(r => r.json());
 
     if (!data.ok) { show('stateLookup'); showErr(data.error); return; }
 
@@ -137,48 +170,46 @@ async function lookupResult() {
       return;
     }
 
+    _resultData = data;
     renderResults(data);
-  } catch(e) {
+  } catch (e) {
     show('stateLookup');
     showErr('Network error: ' + e.message);
   }
 }
 
 function renderResults(d) {
-  document.getElementById('resStudentName').textContent = d.studentName || '—';
-  document.getElementById('resStudentId').textContent   = d.studentId   || '—';
-  document.getElementById('resSubId').textContent       = d.submissionId || '—';
-  document.getElementById('resSubmittedAt').textContent =
+  document.getElementById('resQuizName').textContent     = _quizName;
+  document.getElementById('resStudentName').textContent  = d.studentName  || '—';
+  document.getElementById('resStudentId').textContent    = d.studentId    || '—';
+  document.getElementById('resSubId').textContent        = d.submissionId || '—';
+  document.getElementById('resSubmittedAt').textContent  =
     d.submittedAt ? new Date(d.submittedAt).toLocaleString('en-IN') : '—';
 
   const pct = d.totalMarks > 0 ? (d.finalScore / d.totalMarks) : 0;
-  document.getElementById('scoreBig').textContent  = d.finalScore ?? '—';
+  document.getElementById('scoreBig').textContent   = d.finalScore ?? '—';
   document.getElementById('scoreTotal').textContent = '/ ' + (d.totalMarks ?? '—');
 
-  // Animate ring
   const circumference = 339.29;
-  const offset = circumference - (pct * circumference);
   const ring = document.getElementById('scoreRingFill');
   setTimeout(() => {
     ring.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
-    ring.style.strokeDashoffset = offset;
-    ring.style.stroke = pct >= .5 ? 'var(--accent)' : '#ef4444';
+    ring.style.strokeDashoffset = circumference - pct * circumference;
+    ring.style.stroke = pct >= 0.5 ? 'var(--accent)' : '#ef4444';
   }, 100);
 
   if (d.passMark > 0) {
-    const row = document.getElementById('passFailRow');
-    row.style.display = '';
+    document.getElementById('passFailRow').style.display = '';
     const badge = document.getElementById('passFailBadge');
     badge.textContent = d.passed ? '✓ PASSED' : '✗ FAILED';
     badge.style.color = d.passed ? 'var(--accent)' : '#ef4444';
   }
 
-  // Breakdown
   const container = document.getElementById('answersBreakdown');
   container.innerHTML = '';
   (d.answers || []).forEach((a, i) => {
-    const isAuto = a.type === 'mcq' || a.type === 'one-word' || a.type === 'one_word';
-    const score = a.manualScore !== null && a.manualScore !== undefined ? a.manualScore : a.autoScore;
+    const isAuto  = a.type === 'mcq' || a.type === 'one-word' || a.type === 'one_word';
+    const score   = a.manualScore !== null && a.manualScore !== undefined ? a.manualScore : a.autoScore;
     const correct = isAuto && a.autoScore === a.marks;
     const wrong   = isAuto && a.autoScore !== null && a.autoScore < a.marks;
 
@@ -193,9 +224,11 @@ function renderResults(d) {
       <div class="bc-question">${a.questionText}</div>
       <div class="bc-your-answer">
         <span class="bc-label">Your Answer:</span>
-        <span>${a.given || '<em>No answer</em>'}</span>
+        <span>${a.given || '<em>No answer given</em>'}</span>
       </div>
-      ${isAuto && a.correct ? `<div class="bc-correct-answer"><span class="bc-label">Correct:</span> <span>${a.correct}</span></div>` : ''}
+      ${isAuto && a.correct
+        ? `<div class="bc-correct-answer"><span class="bc-label">Correct Answer:</span> <span>${a.correct}</span></div>`
+        : ''}
     `;
     container.appendChild(card);
   });
@@ -203,7 +236,194 @@ function renderResults(d) {
   show('stateResults');
 }
 
-function resetLookup() { show('stateLookup'); }
+// ── PDF Download ──────────────────────────────────────────
+function downloadPDF() {
+  const d = _resultData;
+  if (!d) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210;
+  const margin = 18;
+  const contentW = pageW - margin * 2;
+  let y = 20;
+
+  // ── Helpers ──
+  const pct = d.totalMarks > 0 ? Math.round((d.finalScore / d.totalMarks) * 100) : 0;
+  const passColor  = d.passed ? [42, 110, 74]  : [192, 57, 43];
+  const accentRGB  = [42, 110, 74];
+  const borderRGB  = [216, 212, 204];
+  const textRGB    = [26, 24, 20];
+  const mutedRGB   = [107, 102, 96];
+
+  function setFont(style, size, color) {
+    doc.setFont('helvetica', style);
+    doc.setFontSize(size);
+    doc.setTextColor(...(color || textRGB));
+  }
+
+  function checkPage(needed = 20) {
+    if (y + needed > 275) { doc.addPage(); y = 20; }
+  }
+
+  function drawRect(x, ry, w, h, fillRGB, strokeRGB) {
+    if (fillRGB)   { doc.setFillColor(...fillRGB);   }
+    if (strokeRGB) { doc.setDrawColor(...strokeRGB); doc.setLineWidth(0.3); }
+    if (fillRGB && strokeRGB) doc.roundedRect(x, ry, w, h, 2, 2, 'FD');
+    else if (fillRGB)         doc.roundedRect(x, ry, w, h, 2, 2, 'F');
+    else                      doc.roundedRect(x, ry, w, h, 2, 2, 'D');
+  }
+
+  // ── Header Banner ──
+  doc.setFillColor(26, 24, 20);
+  doc.rect(0, 0, pageW, 28, 'F');
+  setFont('bold', 18, [255,255,255]);
+  doc.text('QuizPortal', margin, 12);
+  setFont('normal', 9, [180, 180, 170]);
+  doc.text('Result Certificate', margin, 19);
+  setFont('normal', 8, [150, 150, 140]);
+  doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, pageW - margin, 19, { align: 'right' });
+  y = 36;
+
+  // ── Quiz name ──
+  setFont('bold', 14, textRGB);
+  doc.text(_quizName || 'Quiz Result', margin, y);
+  y += 8;
+
+  // ── Score summary box ──
+  drawRect(margin, y, contentW, 36, [245,243,238], borderRGB);
+
+  // Big score circle (drawn as filled circle)
+  const cx = margin + 26, cy = y + 18;
+  doc.setFillColor(...(d.passed ? [237,250,243] : [254,226,226]));
+  doc.circle(cx, cy, 14, 'F');
+  doc.setDrawColor(...passColor); doc.setLineWidth(1.5);
+  doc.circle(cx, cy, 14, 'D');
+  setFont('bold', 14, passColor);
+  doc.text(`${d.finalScore ?? '—'}`, cx, cy - 1, { align: 'center' });
+  setFont('normal', 7, mutedRGB);
+  doc.text(`/ ${d.totalMarks ?? '—'}`, cx, cy + 5, { align: 'center' });
+
+  // Percentage pill
+  doc.setFillColor(...passColor);
+  doc.roundedRect(cx - 10, cy + 9, 20, 6, 1, 1, 'F');
+  setFont('bold', 7, [255,255,255]);
+  doc.text(`${pct}%`, cx, cy + 13.5, { align: 'center' });
+
+  // Meta info
+  const mx = margin + 48;
+  const rows = [
+    ['Student', d.studentName || '—'],
+    ['Roll No.', d.studentId  || '—'],
+    ['Submitted', d.submittedAt ? new Date(d.submittedAt).toLocaleString('en-IN') : '—'],
+    ['Submission ID', d.submissionId || '—'],
+  ];
+  let ry2 = y + 6;
+  rows.forEach(([label, val]) => {
+    setFont('bold', 7.5, mutedRGB);
+    doc.text(label, mx, ry2);
+    setFont('normal', 8, textRGB);
+    doc.text(String(val), mx + 30, ry2);
+    ry2 += 7;
+  });
+
+  // Pass/Fail badge
+  if (d.passMark > 0) {
+    const bx = pageW - margin - 28, by = y + 6;
+    doc.setFillColor(...passColor);
+    doc.roundedRect(bx, by, 28, 9, 2, 2, 'F');
+    setFont('bold', 8, [255,255,255]);
+    doc.text(d.passed ? '✓ PASSED' : '✗ FAILED', bx + 14, by + 6, { align: 'center' });
+  }
+
+  y += 44;
+
+  // ── Answer Breakdown ──
+  setFont('bold', 11, textRGB);
+  doc.text('Answer Breakdown', margin, y);
+  y += 2;
+  doc.setDrawColor(...borderRGB); doc.setLineWidth(0.4);
+  doc.line(margin, y + 2, margin + contentW, y + 2);
+  y += 7;
+
+  (d.answers || []).forEach((a, i) => {
+    const isAuto = a.type === 'mcq' || a.type === 'one-word' || a.type === 'one_word';
+    const score  = a.manualScore !== null && a.manualScore !== undefined ? a.manualScore : a.autoScore;
+    const correct = isAuto && a.autoScore === a.marks;
+    const wrong   = isAuto && a.autoScore !== null && a.autoScore < a.marks;
+
+    // Estimate block height
+    const qLines = doc.splitTextToSize(a.questionText || '', contentW - 20);
+    const aLines = doc.splitTextToSize(a.given || 'No answer given', contentW - 20);
+    const cLines = (isAuto && a.correct) ? doc.splitTextToSize(a.correct, contentW - 20) : [];
+    const blockH = 8 + qLines.length * 5 + aLines.length * 4.5 + (cLines.length ? cLines.length * 4.5 + 4 : 0) + 6;
+
+    checkPage(blockH + 4);
+
+    // Card background + left accent bar
+    const cardBg = correct ? [237,250,243] : wrong ? [254,242,242] : [248,247,244];
+    const barColor = correct ? accentRGB : wrong ? [192,57,43] : borderRGB;
+    drawRect(margin, y, contentW, blockH, cardBg, borderRGB);
+    doc.setFillColor(...barColor);
+    doc.rect(margin, y, 3, blockH, 'F');
+
+    let iy = y + 6;
+
+    // Q number + type + score
+    setFont('bold', 8, textRGB);
+    doc.text(`Q${i+1}`, margin + 7, iy);
+    setFont('normal', 7, mutedRGB);
+    doc.text(a.type, margin + 16, iy);
+    setFont('bold', 8, correct ? accentRGB : wrong ? [192,57,43] : textRGB);
+    doc.text(`${score !== null && score !== undefined ? score : '—'} / ${a.marks}`, margin + contentW - 2, iy, { align: 'right' });
+    iy += 5;
+
+    // Question text
+    setFont('bold', 8.5, textRGB);
+    const qWrapped = doc.splitTextToSize(a.questionText || '', contentW - 20);
+    doc.text(qWrapped, margin + 7, iy);
+    iy += qWrapped.length * 5 + 1;
+
+    // Answer
+    setFont('bold', 7.5, mutedRGB);
+    doc.text('Your Answer:', margin + 7, iy);
+    iy += 4;
+    setFont('normal', 8, textRGB);
+    const aWrapped = doc.splitTextToSize(a.given || 'No answer given', contentW - 20);
+    doc.text(aWrapped, margin + 7, iy);
+    iy += aWrapped.length * 4.5;
+
+    // Correct answer (auto-graded only)
+    if (isAuto && a.correct) {
+      iy += 1;
+      setFont('bold', 7.5, accentRGB);
+      doc.text('Correct Answer:', margin + 7, iy);
+      iy += 4;
+      setFont('normal', 8, [27, 94, 61]);
+      const cWrapped = doc.splitTextToSize(a.correct, contentW - 20);
+      doc.text(cWrapped, margin + 7, iy);
+    }
+
+    y += blockH + 4;
+  });
+
+  // ── Footer on last page ──
+  checkPage(14);
+  doc.setDrawColor(...borderRGB); doc.setLineWidth(0.3);
+  doc.line(margin, y + 2, margin + contentW, y + 2);
+  y += 6;
+  setFont('normal', 7.5, mutedRGB);
+  doc.text('This is a computer-generated result from QuizPortal.', margin, y);
+  doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageW - margin, y, { align: 'right' });
+
+  // ── Save ──
+  const safeName = (d.studentName || 'student').replace(/\s+/g, '_');
+  const safeQuiz = (_quizName || 'quiz').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+  doc.save(`Result_${safeName}_${safeQuiz}.pdf`);
+}
+
+// ── Utilities ──────────────────────────────────────────────
+function resetLookup() { _resultData = null; show('stateLookup'); }
 
 function show(id) {
   ['stateLookup','stateLoading','stateHidden','stateResults'].forEach(s => {
