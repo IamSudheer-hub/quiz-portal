@@ -35,17 +35,19 @@
     <section class="hero">
       <div class="hero-tag">ADMIN</div>
       <h1 class="hero-title">Dashboard<br><em>Login</em></h1>
-      <p class="hero-sub">Enter the Quiz Sheet ID and admin password to access the dashboard.</p>
+      <p class="hero-sub">Select the quiz and enter the admin password to access the dashboard.</p>
     </section>
 
     <div class="lookup-card">
       <div class="form-group">
-        <label for="adminSheetId">Quiz Sheet ID</label>
-        <input type="text" id="adminSheetId" placeholder="Google Sheet ID">
+        <label for="adminQuizSelect">Select Quiz</label>
+        <select id="adminQuizSelect" class="form-select">
+          <option value="">— Choose a quiz —</option>
+        </select>
       </div>
       <div class="form-group">
         <label for="adminPass">Admin Password</label>
-        <input type="password" id="adminPass" placeholder="Password set in Config tab">
+        <input type="password" id="adminPass" placeholder="Password set in the quiz's Config tab">
       </div>
       <button class="btn-primary btn-full" id="btnLogin">Login →</button>
       <div id="loginError" class="error-msg" style="display:none"></div>
@@ -117,25 +119,41 @@ let sessionSheetId = '';
 let sessionPass    = '';
 let allSubmissions = [];
 let currentFilter  = 'all';
+let _selectedQuizName = '';
+
+// ── Populate quiz dropdown from config.js ──────────────────────────────
+(function populateDropdown() {
+  const sel = document.getElementById('adminQuizSelect');
+  (window.QUIZ_LIST || []).forEach(q => {
+    const opt = document.createElement('option');
+    opt.value = q.sheetId;
+    opt.textContent = q.name;
+    sel.appendChild(opt);
+  });
+})();
 
 // ── Login ──────────────────────────────────────────────────────────────
 document.getElementById('btnLogin').onclick = async () => {
-  const sheetId = document.getElementById('adminSheetId').value.trim();
+  const sel     = document.getElementById('adminQuizSelect');
+  const sheetId = sel.value;
   const pass    = document.getElementById('adminPass').value.trim();
   const errEl   = document.getElementById('loginError');
   errEl.style.display = 'none';
 
-  if (!sheetId || !pass) { errEl.textContent='Fill in all fields'; errEl.style.display='block'; return; }
+  if (!sheetId) { errEl.textContent = 'Please select a quiz.'; errEl.style.display='block'; return; }
+  if (!pass)    { errEl.textContent = 'Please enter the admin password.'; errEl.style.display='block'; return; }
 
   show('stateLoading');
   const res = await api('adminLogin', { password: pass }, sheetId);
-  if (!res.ok) { show('stateLogin'); errEl.textContent = res.error || 'Login failed'; errEl.style.display='block'; return; }
+  if (!res.ok) { show('stateLogin'); errEl.textContent = res.error || 'Incorrect password.'; errEl.style.display='block'; return; }
 
-  sessionSheetId = sheetId;
-  sessionPass    = pass;
+  sessionSheetId    = sheetId;
+  sessionPass       = pass;
+  _selectedQuizName = sel.selectedOptions[0]?.text || sheetId;
 
   document.getElementById('adminInfo').style.display = 'flex';
-  document.getElementById('adminSheetLabel').textContent = 'Sheet: …' + sheetId.slice(-8);
+  document.getElementById('adminSheetLabel').textContent = _selectedQuizName;
+  document.getElementById('dashTitle').textContent = _selectedQuizName;
 
   loadSubmissions();
 };
@@ -390,11 +408,13 @@ async function releaseAll() {
 }
 
 function logout() {
-  sessionSheetId = '';
-  sessionPass    = '';
-  allSubmissions = [];
+  sessionSheetId    = '';
+  sessionPass       = '';
+  _selectedQuizName = '';
+  allSubmissions    = [];
   document.getElementById('adminInfo').style.display = 'none';
-  document.getElementById('adminPass').value = '';
+  document.getElementById('adminPass').value         = '';
+  document.getElementById('adminQuizSelect').value   = '';
   show('stateLogin');
 }
 
