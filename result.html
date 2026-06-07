@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
 <!-- jsPDF for PDF export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -125,16 +126,23 @@
 
 </main>
 
-<script src="config.js"></script>
 <script>
 // ── Populate quiz dropdown from QUIZ_LIST ──────────────────
 const sel = document.getElementById('lookupQuizSelect');
-(QUIZ_LIST || []).forEach(q => {
+const quizList = window.QUIZ_LIST || [];
+if (quizList.length === 0) {
   const opt = document.createElement('option');
-  opt.value = q.sheetId;
-  opt.textContent = q.name;
+  opt.disabled = true;
+  opt.textContent = '⚠ No quizzes found — update config.js';
   sel.appendChild(opt);
-});
+} else {
+  quizList.forEach(q => {
+    const opt = document.createElement('option');
+    opt.value = q.sheetId;
+    opt.textContent = q.name;
+    sel.appendChild(opt);
+  });
+}
 
 // ── Wire up lookup ─────────────────────────────────────────
 document.getElementById('btnLookup').onclick = lookupResult;
