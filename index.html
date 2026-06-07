@@ -56,6 +56,9 @@ if (!QUIZ_LIST || QUIZ_LIST.length === 0) {
   grid.innerHTML = '<p style="color:var(--text-muted);padding:2rem 0">No quizzes added yet. Edit <code>config.js</code> to add quizzes.</p>';
 } else {
   QUIZ_LIST.forEach(q => {
+    // If hidden:true, don't show on home page at all
+    if (q.hidden === true) return;
+
     const card = document.createElement('article');
     card.className = 'quiz-card';
     card.dataset.sheetId = q.sheetId;
