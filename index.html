@@ -38,38 +38,8 @@
       <h2 class="section-title">Available Quizzes</h2>
       <div class="section-line"></div>
     </div>
-
-    <!-- =====================================================
-         ADD YOUR QUIZZES HERE
-         Copy a .quiz-card block and fill in:
-           data-sheet-id  = your Google Sheet ID
-           data-title     = Quiz name
-           data-subject   = Subject label
-           data-date      = Date string
-           data-questions = Number of questions
-           data-duration  = Duration in minutes
-         ===================================================== -->
-
-    <div class="quiz-grid" id="quizGrid">
-
-      <!-- EXAMPLE CARD 1 — replace with your real sheet IDs -->
-      <article class="quiz-card" data-sheet-id="1eLUb0pJsxCskCCo0T9Qb9iUf3W6nNU559I4bNTqaypw">
-        <div class="card-subject">Mathematics</div>
-        <h3 class="card-title">Chapter 5: Quadratic Equations</h3>
-        <div class="card-meta">
-          <span class="meta-item">📅 15 Jun 2025</span>
-          <span class="meta-item">❓ 20 Questions</span>
-          <span class="meta-item">⏱ 30 min</span>
-        </div>
-        <div class="card-footer">
-          <span class="card-badge badge-open">Open</span>
-          <button class="btn-take" onclick="startQuiz(this)">Take Quiz →</button>
-        </div>
-      </article>
-
-    </div>
-    <!-- END QUIZ GRID -->
-
+    <!-- Cards are generated automatically from QUIZ_LIST in config.js -->
+    <div class="quiz-grid" id="quizGrid"></div>
   </section>
 </main>
 
@@ -77,12 +47,42 @@
   <p>Powered by Google Sheets + GitHub Pages &mdash; 100% Free</p>
 </footer>
 
+<script src="config.js"></script>
 <script>
+// Auto-build quiz cards from QUIZ_LIST in config.js
+const grid = document.getElementById('quizGrid');
+
+if (!QUIZ_LIST || QUIZ_LIST.length === 0) {
+  grid.innerHTML = '<p style="color:var(--text-muted);padding:2rem 0">No quizzes added yet. Edit <code>config.js</code> to add quizzes.</p>';
+} else {
+  QUIZ_LIST.forEach(q => {
+    const card = document.createElement('article');
+    card.className = 'quiz-card';
+    card.dataset.sheetId = q.sheetId;
+    const meta = [];
+    if (q.date)      meta.push(`📅 ${q.date}`);
+    if (q.questions) meta.push(`❓ ${q.questions} Questions`);
+    if (q.duration)  meta.push(`⏱ ${q.duration} min`);
+    const isOpen = q.open !== false;
+    card.innerHTML = `
+      <div class="card-subject">${q.subject || 'QUIZ'}</div>
+      <h3 class="card-title">${q.name}</h3>
+      ${meta.length ? `<div class="card-meta">${meta.map(m=>`<span class="meta-item">${m}</span>`).join('')}</div>` : ''}
+      <div class="card-footer">
+        <span class="card-badge ${isOpen ? 'badge-open' : 'badge-closed'}">${isOpen ? 'Open' : 'Closed'}</span>
+        ${isOpen
+          ? `<button class="btn-take" onclick="startQuiz(this)">Take Quiz →</button>`
+          : `<span style="font-size:.82rem;color:var(--text-muted);font-weight:600">Not available</span>`}
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
 function startQuiz(btn) {
   const card = btn.closest('.quiz-card');
   const sheetId = card.dataset.sheetId;
   if (!sheetId || sheetId.startsWith('YOUR_')) {
-    alert('Please update the sheet ID in index.html for this quiz card.');
+    alert('Please update the sheetId in config.js for this quiz.');
     return;
   }
   window.location.href = `quiz.html?sheetId=${sheetId}`;
