@@ -140,7 +140,7 @@ function populateDropdown() {
   const sel = document.getElementById('adminQuizSelect');
   if (!sel) return;
   while (sel.options.length > 1) sel.remove(1);
-  const list = window.QUIZ_LIST || [];
+  const list = (typeof QUIZ_LIST !== 'undefined') ? QUIZ_LIST : [];
   if (list.length === 0) {
     const opt = document.createElement('option');
     opt.disabled = true;
