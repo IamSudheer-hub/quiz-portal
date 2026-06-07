@@ -24,6 +24,6 @@ const QUIZ_LIST = [
     date:      "15 Jun 2025",
     questions: 20,
     duration:  30,
-    open:      true
+    open:      false
   },
 ];
