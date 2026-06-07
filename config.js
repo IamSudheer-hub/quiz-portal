@@ -4,7 +4,7 @@
 //  2. Add each quiz to the QUIZ_LIST array
 // ============================================================
 
-const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID_HERE/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHwJGIF-WRdsyUM4jUYA89HoNBvTGwsBlkc2OoUaOrPF5A2q5Td3EA2J1D3TudfAw_og/exec";
 
 // ── ADD YOUR QUIZZES HERE ────────────────────────────────────
 // Each entry needs:
