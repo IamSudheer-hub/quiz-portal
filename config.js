@@ -26,14 +26,4 @@ const QUIZ_LIST = [
     duration:  30,
     open:      true
   },
-  //{
-    //name:      "Unit Test: Laws of Motion",
-    //sheetId:   "YOUR_SHEET_ID_2",
-    //subject:   "Science",
-    //date:      "18 Jun 2025",
-    //questions: 25,
-    //duration:  45,
-    //open:      true
-  //},
-  // Add more quizzes by copying the block above ↑
 ];
