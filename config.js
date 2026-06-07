@@ -15,6 +15,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHwJGIF-WRdsyUM4jUY
 //   questions → number of questions (optional, for display)
 //   duration  → minutes (optional, for display)
 //   open    → true = students can take it, false = closed
+//   hidden -  false = students can see quiz, true = can not see
 
 const QUIZ_LIST = [
   {
@@ -24,7 +25,7 @@ const QUIZ_LIST = [
     date:      "15 Jun 2025",
     questions: 20,
     duration:  30,
-    open:      false,
-    hidden:    true
+    open:      true,
+    hidden:    false
   },
 ];
