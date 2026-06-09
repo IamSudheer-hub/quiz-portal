@@ -22,7 +22,17 @@ const QUIZ_LIST = [
     name:      "Chapter 5: Quadratic Equations",
     sheetId:   "1eLUb0pJsxCskCCo0T9Qb9iUf3W6nNU559I4bNTqaypw",
     subject:   "Mathematics",
-    date:      "15 Jun 2025",
+    date:      "9 Jun 2026",
+    questions: 20,
+    duration:  30,
+    open:      true,
+    hidden:    false
+  },
+    {
+    name:      "Elements, Compound, and Mixtures",
+    sheetId:   "1OxAYGTOB0YD5rXQ6_t_GOjWGb7b8WMqRzHmkqxeP_SM",
+    subject:   "Chemistry",
+    date:      "9 Jun 2026",
     questions: 20,
     duration:  30,
     open:      true,
