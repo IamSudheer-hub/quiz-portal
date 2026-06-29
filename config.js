@@ -38,4 +38,14 @@ const QUIZ_LIST = [
     open:      true,
     hidden:    false
   },
+  {
+    name:      "Subject-Verb Agreement",
+    sheetId:   "1WqnbZjuq_eDlRFlHE4r5dnq1atM7haZn6E5qwkP0-V4",
+    subject:   "English",
+    date:      "29 Jun 2026",
+    questions: 20,
+    duration:  30,
+    open:      true,
+    hidden:    false
+  },
 ];
