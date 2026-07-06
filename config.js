@@ -48,4 +48,14 @@ const QUIZ_LIST = [
     open:      true,
     hidden:    false
   },
+  {
+    name:      "Rational Number, Square and Square Roots, Cube and Cube Roots",
+    sheetId:   "1KadWoVfm1HEEaKK6EatAjTRMl7hc7sLZ0_EaOkiIwLQ",
+    subject:   "Mathematics",
+    date:      "06 Jul 2026",
+    questions: 50,
+    duration:  60,
+    open:      true,
+    hidden:    false
+  },
 ];
