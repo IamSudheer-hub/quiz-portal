@@ -336,6 +336,7 @@ function openGrading(submissionId) {
         <div class="grade-answer-text">${a.given || '<em class="no-answer">No answer given</em>'}</div>
       </div>
       ${a.correct ? `<div class="grade-correct"><span class="bc-label">Correct Answer:</span> ${a.correct}</div>` : ''}
+      ${a.note ? `<div class="grade-note"><span class="bc-label">📝 Note:</span> ${a.note}</div>` : ''}
       ${needsManual ? `
         <div class="grade-input-row">
           <label>Score (out of ${a.marks}):</label>
