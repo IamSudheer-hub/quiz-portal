@@ -630,6 +630,12 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
   max-height: 180px; overflow-y: auto;
 }
 .grade-correct { font-size: .82rem; color: var(--accent); font-weight: 600; margin-bottom: .6rem; }
+.grade-note {
+  font-size: .85rem; color: #7a5e1a; background: var(--warn-bg);
+  border: 1px solid var(--warn-border); border-radius: 6px;
+  padding: .55rem .75rem; margin-bottom: .6rem; white-space: pre-wrap;
+}
+.grade-note .bc-label { color: #7a5e1a; }
 .no-answer { color: #9ca3af; font-style: italic; }
 .grade-input-row {
   display: flex; align-items: center; gap: .75rem;
