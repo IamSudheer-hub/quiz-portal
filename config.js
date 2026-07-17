@@ -58,4 +58,14 @@ const QUIZ_LIST = [
     open:      true,
     hidden:    false
   },
+    {
+    name:      "Profit and Loss I & II",
+    sheetId:   "10RrVNX77u9qKz7MzeC8KqcNXPz71o-jiTWM8r08OvlM",
+    subject:   "Mathematics",
+    date:      "17 Jul 2026",
+    questions: 20,
+    duration:  60,
+    open:      true,
+    hidden:    false
+  },
 ];
