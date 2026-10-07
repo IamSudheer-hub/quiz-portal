@@ -340,6 +340,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
 }
 .nav-dot:hover { border-color: var(--accent); color: var(--accent); }
 .nav-dot.answered { background: var(--accent); border-color: var(--accent); color: #fff; }
+.nav-dot.current { border-color: var(--text); box-shadow: 0 0 0 2px var(--text); }
 
 /* Question Cards */
 .question-card {
@@ -349,6 +350,17 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
   transition: border-color .2s;
 }
 .question-card:focus-within { border-color: var(--accent); }
+/* One question at a time: only the active card is shown */
+#questionsContainer .question-card { display: none; }
+#questionsContainer .question-card.active { display: block; }
+
+/* Previous / Next controls */
+.quiz-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.25rem;
+}
+.quiz-controls .btn-secondary:disabled { opacity: .45; cursor: not-allowed; }
+.q-counter { font-size: .85rem; font-weight: 600; color: var(--text-muted); text-align: center; }
 .q-header {
   display: flex; align-items: center; gap: .6rem;
   margin-bottom: 1rem; flex-wrap: wrap;
