@@ -78,14 +78,19 @@
     <div class="quiz-layout">
       <aside class="question-nav" id="questionNav"></aside>
       <div class="questions-panel">
-        <form id="quizForm">
+        <form id="quizForm" onsubmit="return false;">
           <div id="questionsContainer"></div>
         </form>
-        <div class="submit-zone">
+        <div class="quiz-controls">
+          <button type="button" class="btn-secondary" id="btnPrev">← Previous</button>
+          <span class="q-counter" id="qCounter">Question 1 of 1</span>
+          <button type="button" class="btn-primary" id="btnNext">Next →</button>
+        </div>
+        <div class="submit-zone" id="submitZone" style="display:none">
           <div class="submit-info">
             <span id="answeredCount">0</span> of <span id="totalCount">0</span> questions answered
           </div>
-          <button class="btn-primary" id="btnSubmit">Submit Quiz ✓</button>
+          <button type="button" class="btn-primary" id="btnSubmit">Submit Quiz ✓</button>
         </div>
       </div>
     </div>
@@ -126,6 +131,7 @@ let questions = [];
 let timerInterval = null;
 let timeLeft = 0;
 let answers = {};
+let currentIdx = 0;
 
 // ── Init ───────────────────────────────────────────────────────────────
 if (!sheetId) showError("No sheet ID provided. <a href='index.html'>Go back</a>");
@@ -192,7 +198,7 @@ function renderQuiz(name, sid) {
     nb.textContent = idx + 1;
     nb.type = 'button';
     nb.id = `nav_${idx}`;
-    nb.onclick = () => document.getElementById(`q_${idx}`).scrollIntoView({ behavior:'smooth', block:'center' });
+    nb.onclick = () => showQuestion(idx);
     nav.appendChild(nb);
 
     // Question card
@@ -253,6 +259,12 @@ function renderQuiz(name, sid) {
 
   document.getElementById('totalCount').textContent = questions.length;
 
+  // One-question-at-a-time controls
+  document.getElementById('btnPrev').onclick = () => showQuestion(currentIdx - 1);
+  document.getElementById('btnNext').onclick = () => showQuestion(currentIdx + 1);
+  currentIdx = 0;
+  showQuestion(0);
+
   // Timer
   if (timeLeft > 0) {
     const tb = document.getElementById('timerBox');
@@ -268,6 +280,24 @@ function renderQuiz(name, sid) {
 
   show('stateQuiz');
   document.getElementById('btnSubmit').onclick = handleSubmit;
+}
+
+function showQuestion(i) {
+  if (i < 0 || i >= questions.length) return;
+  currentIdx = i;
+  const last = questions.length - 1;
+
+  questions.forEach((_, idx) => {
+    document.getElementById(`q_${idx}`)?.classList.toggle('active', idx === i);
+    document.getElementById(`nav_${idx}`)?.classList.toggle('current', idx === i);
+  });
+
+  document.getElementById('qCounter').textContent = `Question ${i + 1} of ${questions.length}`;
+  document.getElementById('btnPrev').disabled = (i === 0);
+  document.getElementById('btnNext').style.display = (i === last) ? 'none' : '';
+  document.getElementById('submitZone').style.display = (i === last) ? '' : 'none';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function recordAnswer(qId, val, idx) {
