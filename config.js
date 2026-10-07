@@ -26,7 +26,7 @@ const QUIZ_LIST = [
     questions: 20,
     duration:  30,
     open:      true,
-    hidden:    false
+    hidden:    true
   },
     {
     name:      "Elements, Compound, and Mixtures",
@@ -36,7 +36,7 @@ const QUIZ_LIST = [
     questions: 20,
     duration:  30,
     open:      true,
-    hidden:    false
+    hidden:    true
   },
   {
     name:      "Subject-Verb Agreement",
@@ -46,7 +46,7 @@ const QUIZ_LIST = [
     questions: 20,
     duration:  30,
     open:      true,
-    hidden:    false
+    hidden:    true
   },
   {
     name:      "Rational Number, Square and Square Roots, Cube and Cube Roots",
@@ -56,7 +56,7 @@ const QUIZ_LIST = [
     questions: 50,
     duration:  60,
     open:      true,
-    hidden:    false
+    hidden:    true
   },
     {
     name:      "Profit and Loss I & II",
@@ -66,7 +66,7 @@ const QUIZ_LIST = [
     questions: 20,
     duration:  60,
     open:      true,
-    hidden:    false
+    hidden:    true
   },
   {
     name:      "Simple Interest and Compound Interest",
