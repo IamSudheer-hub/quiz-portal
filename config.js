@@ -68,4 +68,14 @@ const QUIZ_LIST = [
     open:      true,
     hidden:    false
   },
+  {
+    name:      "Simple Interest and Compound Interest",
+    sheetId:   "1BRNd4__XH-48VDR_a_tj-Zo6jYx3UH3V_nSYpKF-_mY",
+    subject:   "Mathematics",
+    date:      "07 Oct 2026",
+    questions: 20,
+    duration:  120,
+    open:      true,
+    hidden:    false
+  },
 ];
