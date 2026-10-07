@@ -6,7 +6,7 @@
 <title>Quiz — Loading…</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -288,7 +288,11 @@ function showQuestion(i) {
   const last = questions.length - 1;
 
   questions.forEach((_, idx) => {
-    document.getElementById(`q_${idx}`)?.classList.toggle('active', idx === i);
+    const card = document.getElementById(`q_${idx}`);
+    if (card) {
+      card.classList.toggle('active', idx === i);
+      card.style.display = (idx === i) ? 'block' : 'none';
+    }
     document.getElementById(`nav_${idx}`)?.classList.toggle('current', idx === i);
   });
 
